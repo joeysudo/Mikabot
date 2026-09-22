@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mikabot-monitor",
+  "main": "workers/monitor.ts",
+  "compatibility_date": "2026-05-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "triggers": { "crons": ["0 23 * * *"] },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "mikabot",
+      "database_id": "REPLACE_WITH_THE_SAME_DATABASE_AS_THE_APP",
+    },
+  ],
+}
