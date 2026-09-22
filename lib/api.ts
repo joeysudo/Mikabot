@@ -30,6 +30,8 @@ import {
   verifier,
   publish,
   ProviderError,
+  providerSetup,
+  accountSnapshot,
 } from "./providers";
 import { plan } from "./planner";
 import { aiProvider } from "./ai";
@@ -179,7 +181,7 @@ export async function handle(req: Request, env: Env): Promise<Response> {
         attempts: attempts.results,
         activity: activity.results,
         providers: Object.fromEntries(
-          platforms.map((p) => [p, { configured: configured(p, env) }]),
+          platforms.map((p) => [p, providerSetup(p, env, req)]),
         ),
         aiReady: Boolean(aiProvider(env)),
         aiProvider: aiProvider(env),
@@ -460,6 +462,34 @@ export async function handle(req: Request, env: Env): Promise<Response> {
         env.DB.prepare("UPDATE accounts SET active=1 WHERE id=?").bind(path[1]),
       ]);
       return json({ ok: true });
+    }
+    if (
+      path[0] === "accounts" &&
+      path[2] === "snapshot" &&
+      req.method === "GET"
+    ) {
+      const row = await env.DB.prepare(
+        "SELECT platform,remote_id,secret,expires_at FROM accounts WHERE id=?",
+      )
+        .bind(path[1])
+        .first<{
+          platform: Platform;
+          remote_id: string;
+          secret: string;
+          expires_at: number;
+        }>();
+      if (!row || !isPlatform(row.platform))
+        throw new Error("Account not found.");
+      if (row.expires_at <= Date.now())
+        throw new Error("This authorization expired. Reconnect the account.");
+      return json({
+        snapshot: await accountSnapshot(
+          row.platform,
+          row.remote_id,
+          await unseal(row.secret, env),
+          env,
+        ),
+      });
     }
     if (path[0] === "accounts" && req.method === "DELETE") {
       await env.DB.prepare("DELETE FROM accounts WHERE id=?")

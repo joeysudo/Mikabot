@@ -358,7 +358,7 @@ export async function poll(c: Connection, env: Env): Promise<PollResult> {
   if (c.channel === "facebook" || c.channel === "instagram") {
     const root =
       "https://graph.facebook.com/" +
-      (setting(env, "META_API_VERSION") || "v23.0");
+      (setting(env, "META_API_VERSION") || "v26.0");
     const ig = c.channel === "instagram";
     const posts = await get(
       `${root}/${a.remote_id}/${ig ? "media" : "posts"}?fields=id,${ig ? "caption" : "message"}&limit=10`,
@@ -538,7 +538,7 @@ export async function sendReply(
     url = "https://api.x.com/2/tweets";
     payload = { text, reply: { in_reply_to_tweet_id: m.route.messageId } };
   } else if (m.channel === "instagram" || m.channel === "facebook") {
-    url = `https://graph.facebook.com/${setting(env, "META_API_VERSION") || "v23.0"}/${m.route.commentId}/${m.channel === "instagram" ? "replies" : "comments"}`;
+    url = `https://graph.facebook.com/${setting(env, "META_API_VERSION") || "v26.0"}/${m.route.commentId}/${m.channel === "instagram" ? "replies" : "comments"}`;
     payload = { message: text };
   } else throw new ProviderError(400, false);
   const opts = j(payload);

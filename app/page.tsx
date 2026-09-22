@@ -27,13 +27,42 @@ type Tab =
   | "mika"
   | "channels"
   | "brand";
+type AccountSnapshot = {
+  profile: {
+    id: string;
+    name: string;
+    handle?: string;
+    description?: string;
+  };
+  recent: Array<{
+    id: string;
+    text: string;
+    publishedAt?: string;
+    url?: string;
+    engagement?: number;
+  }>;
+  access: "profile_and_content" | "profile_only";
+  note: string;
+};
 type State = {
   posts: Post[];
   brief: Brief;
   accounts: Account[];
   attempts: Attempt[];
   activity: Array<{ message: string; createdAt: string }>;
-  providers: Record<Platform, { configured: boolean }>;
+  providers: Record<
+    Platform,
+    {
+      configured: boolean;
+      appConfigured: boolean;
+      securityConfigured: boolean;
+      callback: string;
+      consoleUrl: string;
+      scopes: string[];
+      reads: string;
+      review: string;
+    }
+  >;
   aiReady: boolean;
   aiProvider: string | null;
   onboardingComplete: boolean;
@@ -46,8 +75,20 @@ const empty: State = {
   attempts: [],
   activity: [],
   providers: Object.fromEntries(
-    platforms.map((p) => [p, { configured: false }]),
-  ) as State["providers"],
+    platforms.map((p) => [
+      p,
+      {
+        configured: false,
+        appConfigured: false,
+        securityConfigured: false,
+        callback: "",
+        consoleUrl: "",
+        scopes: [],
+        reads: "",
+        review: "",
+      },
+    ]),
+  ) as unknown as State["providers"],
   aiReady: false,
   aiProvider: null,
   onboardingComplete: false,
@@ -152,6 +193,11 @@ export default function Home() {
       account: Account;
     } | null>(null),
     [guide, setGuide] = useState<Platform | null>(null),
+    [setupPlatform, setSetupPlatform] = useState<Platform | null>(null),
+    [snapshot, setSnapshot] = useState<{
+      account: Account;
+      data: AccountSnapshot;
+    } | null>(null),
     [brief, setBrief] = useState<Brief>(defaultBrief),
     [planPlatforms, setPlanPlatforms] = useState<Platform[]>([...platforms]),
     [planDate, setPlanDate] = useState(() => dayKey(new Date())),
@@ -171,6 +217,7 @@ export default function Home() {
         post: Post;
         url: string;
         source: string;
+        snapshot: AccountSnapshot;
       };
       if (!r.ok)
         throw new Error(x.error || "Something went wrong.", {
@@ -1030,21 +1077,39 @@ export default function Home() {
                                 </small>
                               </span>
                             </label>
-                            <button
-                              disabled={busy}
-                              onClick={() =>
-                                void act(async () => {
-                                  await request(
-                                    "accounts/" + encodeURIComponent(a.id),
-                                    "DELETE",
-                                    {},
-                                  );
-                                  await reload();
-                                }, "Disconnected from Mika. Revoke permissions in platform settings if needed.")
-                              }
-                            >
-                              Disconnect
-                            </button>
+                            <div className="account-actions">
+                              <button
+                                disabled={busy || a.expiresAt < now}
+                                onClick={() =>
+                                  void act(async () => {
+                                    const result = await request(
+                                      `accounts/${encodeURIComponent(a.id)}/snapshot`,
+                                    );
+                                    setSnapshot({
+                                      account: a,
+                                      data: result.snapshot,
+                                    });
+                                  })
+                                }
+                              >
+                                Sync account data
+                              </button>
+                              <button
+                                disabled={busy}
+                                onClick={() =>
+                                  void act(async () => {
+                                    await request(
+                                      "accounts/" + encodeURIComponent(a.id),
+                                      "DELETE",
+                                      {},
+                                    );
+                                    await reload();
+                                  }, "Disconnected from Mika. Revoke permissions in platform settings if needed.")
+                                }
+                              >
+                                Disconnect
+                              </button>
+                            </div>
                           </div>
                         ))}
                         <div className="connection-status">
@@ -1061,8 +1126,12 @@ export default function Home() {
                         <div className="actions">
                           <button
                             className="primary"
-                            disabled={busy || !state.providers[p].configured}
-                            onClick={() =>
+                            disabled={busy}
+                            onClick={() => {
+                              if (!state.providers[p].configured) {
+                                setSetupPlatform(p);
+                                return;
+                              }
                               void act(async () => {
                                 const x = await request(
                                   `oauth/${p}/start`,
@@ -1070,12 +1139,14 @@ export default function Home() {
                                   {},
                                 );
                                 window.location.assign(x.url);
-                              })
-                            }
+                              });
+                            }}
                           >
-                            {list.length
-                              ? "Reconnect / add account"
-                              : "Connect " + labels[p]}
+                            {!state.providers[p].configured
+                              ? "Set up developer app"
+                              : list.length
+                                ? "Reconnect / add account"
+                                : "Connect " + labels[p]}
                           </button>
                           <button
                             onClick={() => {
@@ -1092,15 +1163,9 @@ export default function Home() {
                         </div>
                         {!state.providers[p].configured && (
                           <p className="footnote">
-                            The owner needs to configure this platform’s
-                            developer app and workspace security.{" "}
-                            <a
-                              href="https://github.com/joeysudo/Mikabot/blob/main/docs/PLATFORMS.md"
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              Setup guide ↗
-                            </a>
+                            Configure the developer app once. Every user can
+                            then connect through the platform’s own consent
+                            screen without sharing a password with Mika.
                           </p>
                         )}
                       </section>
@@ -1595,6 +1660,189 @@ export default function Home() {
                 Keep planning
               </button>
             </div>
+          </div>
+        </Dialog>
+      )}
+      {setupPlatform && (
+        <Dialog
+          title={labels[setupPlatform] + " developer app setup"}
+          onClose={() => setSetupPlatform(null)}
+        >
+          <div className="confirm-body developer-setup">
+            <p>
+              Create one developer app for Mika, register this exact callback,
+              then keep the client secret in the server environment. End users
+              will connect through OAuth and Mika will never see their password.
+            </p>
+            <div className="setup-progress">
+              <span
+                className={
+                  state.providers[setupPlatform].appConfigured ? "done" : ""
+                }
+              >
+                {state.providers[setupPlatform].appConfigured ? "✓" : "1"}
+                Developer credentials
+              </span>
+              <span
+                className={
+                  state.providers[setupPlatform].securityConfigured
+                    ? "done"
+                    : ""
+                }
+              >
+                {state.providers[setupPlatform].securityConfigured ? "✓" : "2"}
+                Workspace security
+              </span>
+              <span
+                className={
+                  state.providers[setupPlatform].configured ? "done" : ""
+                }
+              >
+                {state.providers[setupPlatform].configured ? "✓" : "3"}
+                Ready to connect
+              </span>
+            </div>
+            <ol className="setup-list">
+              <li>
+                Create an app in the official {labels[setupPlatform]} developer
+                console and enable its sign-in or OAuth product.
+              </li>
+              <li>
+                Add the exact callback URL below. For local development, the
+                provider must explicitly allow the local URL.
+              </li>
+              <li>
+                Enable the requested permissions. Complete platform review
+                before connecting customers outside your app’s test roles.
+              </li>
+              <li>
+                Store the client ID and secret in Mika’s server environment,
+                restart Mika, then return here and select Connect.
+              </li>
+            </ol>
+            <label>
+              OAuth callback URL
+              <div className="copy-field">
+                <code>{state.providers[setupPlatform].callback}</code>
+                <button
+                  onClick={() =>
+                    void act(async () => {
+                      await navigator.clipboard.writeText(
+                        state.providers[setupPlatform].callback,
+                      );
+                    }, "Callback URL copied.")
+                  }
+                >
+                  Copy
+                </button>
+              </div>
+            </label>
+            <label>
+              Server variables
+              <div className="code-block">
+                {setupPlatform === "instagram" || setupPlatform === "facebook"
+                  ? "META_CLIENT_ID\nMETA_CLIENT_SECRET"
+                  : `${setupPlatform.toUpperCase()}_CLIENT_ID\n${setupPlatform.toUpperCase()}_CLIENT_SECRET`}
+              </div>
+            </label>
+            <div>
+              <strong>Permissions</strong>
+              <div className="scope-list">
+                {state.providers[setupPlatform].scopes.map((scope) => (
+                  <code key={scope}>{scope}</code>
+                ))}
+              </div>
+            </div>
+            <div className="capability-note">
+              <strong>Mika can read</strong>
+              <p>{state.providers[setupPlatform].reads}</p>
+              <small>{state.providers[setupPlatform].review}</small>
+            </div>
+            <div className="actions">
+              <a
+                className="button-link primary"
+                href={state.providers[setupPlatform].consoleUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open official developer console ↗
+              </a>
+              {state.providers[setupPlatform].configured && (
+                <button
+                  onClick={() => {
+                    const p = setupPlatform;
+                    setSetupPlatform(null);
+                    void act(async () => {
+                      const x = await request(`oauth/${p}/start`, "POST", {});
+                      window.location.assign(x.url);
+                    });
+                  }}
+                >
+                  Connect {labels[setupPlatform]}
+                </button>
+              )}
+            </div>
+          </div>
+        </Dialog>
+      )}
+      {snapshot && (
+        <Dialog
+          title={snapshot.account.label + " · account data"}
+          onClose={() => setSnapshot(null)}
+        >
+          <div className="confirm-body account-snapshot">
+            <div className="snapshot-profile">
+              <span className="big-star">◎</span>
+              <div>
+                <h2>{snapshot.data.profile.name}</h2>
+                {snapshot.data.profile.handle && (
+                  <strong>{snapshot.data.profile.handle}</strong>
+                )}
+                {snapshot.data.profile.description && (
+                  <p>{snapshot.data.profile.description}</p>
+                )}
+              </div>
+            </div>
+            <div className="capability-note">
+              <strong>
+                {snapshot.data.access === "profile_and_content"
+                  ? "Profile and content access"
+                  : "Profile access only"}
+              </strong>
+              <p>{snapshot.data.note}</p>
+            </div>
+            <div className="snapshot-posts">
+              <h3>Recent content</h3>
+              {snapshot.data.recent.length ? (
+                snapshot.data.recent.map((post) => (
+                  <article key={post.id}>
+                    <p>{post.text || "Post without a text caption"}</p>
+                    <small>
+                      {post.publishedAt
+                        ? new Date(post.publishedAt).toLocaleString()
+                        : "Date unavailable"}
+                      {typeof post.engagement === "number"
+                        ? ` · ${post.engagement} recorded interactions`
+                        : ""}
+                    </small>
+                    {post.url && (
+                      <a href={post.url} target="_blank" rel="noreferrer">
+                        View on {labels[snapshot.account.platform]} ↗
+                      </a>
+                    )}
+                  </article>
+                ))
+              ) : (
+                <p>
+                  No content was returned under this account’s current API
+                  permissions.
+                </p>
+              )}
+            </div>
+            <p className="footnote">
+              Mika requests this snapshot when you press Sync. Access remains
+              limited to the scopes you approved on the platform.
+            </p>
           </div>
         </Dialog>
       )}

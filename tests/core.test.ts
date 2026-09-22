@@ -14,6 +14,7 @@ import { authorized, seal, unseal, newSession } from "../lib/security";
 import { decide } from "../lib/agent/decide";
 import { sendReply } from "../lib/agent/connectors";
 import { deliver } from "../lib/agent/runtime";
+import { accountSnapshot, providerSetup } from "../lib/providers";
 import type { Inbound, FAQ, AgentItem } from "../lib/agent/types";
 import type { Env } from "../lib/db";
 
@@ -223,6 +224,58 @@ test("starter plan returns distinct drafts without fake publishing", () => {
   assert.equal(new Set(posts.map((p) => p.title)).size, 3);
   assert.equal(Object.keys(posts[0].captions).length, 4);
   assert.notEqual(posts[0].captions.linkedin, posts[0].captions.instagram);
+});
+
+test("provider setup exposes safe OAuth metadata and account sync returns sanitized content", async () => {
+  const e = env();
+  e.APP_ORIGIN = "https://mika.test";
+  e.WORKSPACE_PASSWORD = crypto.randomUUID();
+  e.SESSION_SECRET = crypto.randomUUID() + crypto.randomUUID();
+  e.X_CLIENT_ID = "synthetic-client";
+  e.X_CLIENT_SECRET = "synthetic-secret";
+  const setup = providerSetup(
+    "x",
+    e,
+    new Request("https://mika.test/api/state"),
+  );
+  assert.equal(setup.configured, true);
+  assert.equal(setup.callback, "https://mika.test/api/oauth/x/callback");
+  assert.ok(!JSON.stringify(setup).includes("synthetic-secret"));
+
+  const original = globalThis.fetch;
+  globalThis.fetch = async (url) =>
+    String(url).includes("/tweets?")
+      ? Response.json({
+          data: [
+            {
+              id: "post-1",
+              text: "A connected account post",
+              created_at: "2026-09-22T00:00:00Z",
+              public_metrics: { like_count: 3, reply_count: 1 },
+            },
+          ],
+        })
+      : Response.json({
+          data: {
+            id: "account-1",
+            name: "Test account",
+            username: "test_account",
+            description: "Synthetic profile",
+          },
+        });
+  try {
+    const snapshot = await accountSnapshot(
+      "x",
+      "account-1",
+      "synthetic-token",
+      e,
+    );
+    assert.equal(snapshot.profile.handle, "@test_account");
+    assert.equal(snapshot.recent[0].text, "A connected account post");
+    assert.equal(snapshot.recent[0].engagement, 4);
+  } finally {
+    globalThis.fetch = original;
+  }
 });
 test("agent auto-replies only to approved exact FAQ in allowed mode", () => {
   const policy = {

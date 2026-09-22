@@ -14,7 +14,7 @@ Mika is an independent marketing and communication agent workspace. It monitors 
 - **Account rules:** paused, observe, draft-and-review, or explicitly approved FAQ auto-replies; per-account daily limits and conversation cooldowns.
 - **Skills & knowledge:** an inspectable seven-step skill pipeline and an owner-approved FAQ library.
 - **Content workspace:** weekly calendar, search, draft editing, platform captions, reviews, revision-specific approval and JSON export.
-- **Account onboarding:** OAuth for Instagram/Facebook/LinkedIn/X; Gemini-assisted names, bios, checklists and official setup links for every supported channel. Bot, Twilio and Gmail adapters use deployment-side configuration.
+- **Account onboarding:** in-app developer setup for Instagram/Facebook/LinkedIn/X, exact OAuth callbacks and scopes, encrypted account connections, profile/recent-content sync, plus Gemini-assisted names, bios and checklists for every supported channel. Bot, Twilio and Gmail adapters use deployment-side configuration.
 - **Durable data:** SQLite/D1-backed state, encrypted social access tokens, signed workspace sessions, same-origin mutation checks and durable delivery claims.
 - **Daily job:** a separate scheduled Cloudflare Worker invoking the same monitoring loop as the UI.
 
@@ -32,7 +32,7 @@ Mika is an independent marketing and communication agent workspace. It monitors 
 | SMS       | —                                       | Twilio inbound messages and replies                                              |
 | Email     | —                                       | Gmail inbox monitoring and threaded replies                                      |
 
-These are implemented adapters, **not preconnected accounts**. No real provider account, AI key, OAuth consent, live reply or scheduler deployment is included. Live provider flows require credentials, account eligibility and platform access. Code-level tests use synthetic fixtures; live provider certification remains to be done with an authorized test account.
+These are implemented adapters, **not preconnected accounts**. Live provider flows require developer credentials, account eligibility, user consent and sometimes platform review or a paid API plan. Consumer platforms do not provide a general API for creating personal accounts; Mika prepares the profile and guides the user through the platform-owned signup and verification. Code-level tests use synthetic fixtures; live provider certification remains to be done with an authorized test account.
 
 ## Run locally
 

@@ -11,6 +11,7 @@ export type Env = {
   META_API_VERSION?: string;
   LINKEDIN_CLIENT_ID?: string;
   LINKEDIN_CLIENT_SECRET?: string;
+  LINKEDIN_VERSION?: string;
   X_CLIENT_ID?: string;
   X_CLIENT_SECRET?: string;
   GEMINI_API_KEY?: string;

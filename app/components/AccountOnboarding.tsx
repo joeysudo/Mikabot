@@ -31,7 +31,19 @@ const social = new Set<AccountChannel>([
 type Props = {
   brief: Brief;
   accounts: Account[];
-  providers: Record<Platform, { configured: boolean }>;
+  providers: Record<
+    Platform,
+    {
+      configured: boolean;
+      appConfigured: boolean;
+      securityConfigured: boolean;
+      callback: string;
+      consoleUrl: string;
+      scopes: string[];
+      reads: string;
+      review: string;
+    }
+  >;
   aiProvider: string | null;
   onComplete: () => Promise<void>;
 };
@@ -52,6 +64,7 @@ export default function AccountOnboarding({
   const [audience, setAudience] = useState(brief.audience);
   const [tone, setTone] = useState(brief.tone || "Warm and helpful");
   const [kit, setKit] = useState<AccountKit | null>(null);
+  const [developer, setDeveloper] = useState<Platform | null>(null);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
 
@@ -165,6 +178,8 @@ export default function AccountOnboarding({
                       <span className="setup-done">✓ Ready</span>
                     ) : configured ? (
                       <button disabled={Boolean(busy)} onClick={() => void connect(channel.id)}>{busy === channel.id ? "Opening…" : "Connect"}</button>
+                    ) : social.has(channel.id) ? (
+                      <button onClick={() => setDeveloper(channel.id as Platform)}>Set up app</button>
                     ) : (
                       <a href={channel.setup} target="_blank" rel="noreferrer">Open setup ↗</a>
                     )}
@@ -172,6 +187,27 @@ export default function AccountOnboarding({
                 );
               })}
             </div>
+            {developer && (
+              <div className="onboarding-developer">
+                <div>
+                  <p className="eyebrow">{developer.toUpperCase()} · DEVELOPER APP</p>
+                  <h3>Configure OAuth once, then users connect inside Mika.</h3>
+                  <p>{providers[developer].reads}</p>
+                </div>
+                <label>
+                  Callback URL
+                  <div className="copy-field">
+                    <code>{providers[developer].callback}</code>
+                    <button onClick={() => void navigator.clipboard.writeText(providers[developer].callback)}>Copy</button>
+                  </div>
+                </label>
+                <div className="scope-list">
+                  {providers[developer].scopes.map((scope) => <code key={scope}>{scope}</code>)}
+                </div>
+                <p className="setup-note">{providers[developer].review}</p>
+                <a className="button-link primary" href={providers[developer].consoleUrl} target="_blank" rel="noreferrer">Open official developer console ↗</a>
+              </div>
+            )}
             <p className="setup-note">Mika never receives your password. Platform authorization and connector credentials stay under your control.</p>
             <div className="onboarding-actions">
               <button className="primary" disabled={!accounts.length || Boolean(busy)} onClick={() => void finish("connected")}>Continue to Mika</button>

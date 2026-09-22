@@ -803,6 +803,105 @@ h3 {
   font-size: 10px;
   padding: 6px;
 }
+.account-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.developer-setup {
+  max-width: 760px;
+}
+.setup-progress {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 20px 0;
+}
+.setup-progress span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.setup-progress span.done {
+  border-color: #bddbc7;
+  background: #f1f8f3;
+  color: #486c53;
+}
+.copy-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 7px;
+}
+.copy-field code,
+.code-block {
+  flex: 1;
+  padding: 11px 13px;
+  border-radius: 9px;
+  background: #f5f2f8;
+  color: #574b62;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.scope-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+.scope-list code {
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: var(--lav);
+  color: var(--purple);
+  font-size: 10px;
+}
+.capability-note {
+  margin: 18px 0;
+  padding: 15px 17px;
+  border-radius: 12px;
+  background: #f8f6fb;
+}
+.capability-note p {
+  margin: 6px 0;
+}
+.capability-note small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+.snapshot-profile {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+}
+.snapshot-profile h2 {
+  margin: 0 0 5px;
+}
+.snapshot-posts article {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.snapshot-posts article p {
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+.snapshot-posts article small {
+  display: block;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.snapshot-posts article a {
+  color: var(--purple);
+  font-size: 11px;
+  text-decoration: underline;
+}
 .footnote a {
   text-decoration: underline;
 }
@@ -1708,6 +1807,22 @@ summary {
   margin: 22px 0;
   color: var(--muted);
   font-size: 12px;
+}
+.onboarding-developer {
+  margin-top: 18px;
+  padding: 20px;
+  border: 1px solid #cfc0eb;
+  border-radius: 14px;
+  background: #fbf9ff;
+}
+.onboarding-developer h3 {
+  margin: 7px 0;
+}
+.onboarding-developer label {
+  display: block;
+  margin: 16px 0 10px;
+  font-size: 11px;
+  font-weight: 600;
 }
 .onboarding-actions {
   display: flex;
