@@ -46,6 +46,7 @@ type Props = {
   >;
   aiProvider: string | null;
   onComplete: () => Promise<void>;
+  onExit?: () => void;
 };
 
 export default function AccountOnboarding({
@@ -54,6 +55,7 @@ export default function AccountOnboarding({
   providers,
   aiProvider,
   onComplete,
+  onExit,
 }: Props) {
   const [path, setPath] = useState<"choose" | "connect" | "create">("choose");
   const [selected, setSelected] = useState<AccountChannel[]>(
@@ -130,7 +132,10 @@ export default function AccountOnboarding({
 
   return (
     <main className="onboarding-shell">
-      <div className="onboarding-brand">mika<span>✳</span></div>
+      <div className="onboarding-topbar">
+        <div className="onboarding-brand">mika<span>✳</span></div>
+        {onExit && <button onClick={onExit}>← Back to dashboard</button>}
+      </div>
       <section className="onboarding-card">
         <p className="eyebrow">ACCOUNT SETUP · STEP ONE</p>
         <h1>First, give Mika somewhere to work.</h1>
@@ -177,7 +182,7 @@ export default function AccountOnboarding({
                     {connected ? (
                       <span className="setup-done">✓ Ready</span>
                     ) : configured ? (
-                      <button disabled={Boolean(busy)} onClick={() => void connect(channel.id)}>{busy === channel.id ? "Opening…" : "Connect"}</button>
+                      <button disabled={Boolean(busy)} onClick={() => void connect(channel.id)}>{busy === channel.id ? "Opening…" : "Test & connect"}</button>
                     ) : social.has(channel.id) ? (
                       <button onClick={() => setDeveloper(channel.id as Platform)}>Set up app</button>
                     ) : (

@@ -25,6 +25,7 @@ type Tab =
   | "planner"
   | "library"
   | "mika"
+  | "setup"
   | "channels"
   | "brand";
 type AccountSnapshot = {
@@ -355,6 +356,22 @@ export default function Home() {
       />
     );
   }
+  if (!loading && !locked && tab === "setup") {
+    return (
+      <AccountOnboarding
+        brief={state.brief}
+        accounts={state.accounts}
+        providers={state.providers}
+        aiProvider={state.aiProvider}
+        onExit={() => setTab("agent")}
+        onComplete={async () => {
+          await reload();
+          setTab("agent");
+          setNotice("Account setup saved. Mika is ready when you are.");
+        }}
+      />
+    );
+  }
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(week);
     d.setDate(d.getDate() + i);
@@ -381,6 +398,7 @@ export default function Home() {
     planner: "Your social, together.",
     library: "A home for every idea.",
     mika: "Let’s make a little momentum.",
+    setup: "Connect Mika to your accounts.",
     channels: "Your channels. One workspace.",
     brand: "Make it sound like you.",
   }[tab];
@@ -392,6 +410,7 @@ export default function Home() {
     planner: "One calm place to turn good ideas into your next great post.",
     library: "Find, refine and review every piece of your content.",
     mika: "Start with a goal. Leave with three ideas, adapted for your channels.",
+    setup: "Test developer configuration and connect existing accounts.",
     channels: "Connect the places your audience calls home.",
     brand: "Give Mika the context to create relevant, grounded content.",
   }[tab];
@@ -458,6 +477,7 @@ export default function Home() {
               ["planner", "◫", "Content planner"],
               ["library", "▤", "Content library"],
               ["mika", "✦", "Create with Mika"],
+              ["setup", "↗", "Account setup"],
               ["channels", "◎", "Channels"],
               ["brand", "◈", "Brand context"],
             ] as const
@@ -1146,7 +1166,7 @@ export default function Home() {
                               ? "Set up developer app"
                               : list.length
                                 ? "Reconnect / add account"
-                                : "Connect " + labels[p]}
+                                : "Test & connect " + labels[p]}
                           </button>
                           <button
                             onClick={() => {
